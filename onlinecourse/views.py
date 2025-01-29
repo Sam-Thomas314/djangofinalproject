@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment
+from .models import Course, Enrollment, Question, Choice, Submission
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -102,6 +102,16 @@ def enroll(request, course_id):
 
     return HttpResponseRedirect(reverse(viewname='onlinecourse:course_details', args=(course.id,)))
 
+def submit(request, course_id):
+    course = get_object_or_404(Course, pk=course_id)
+    user = request.user
+    enrollment = Enrollment.objects.create(user = user, course = course)
+    submission = Submission.objects.create(enrollment=enrollment)
+    choices = extract_choices(request)
+    submission.choices.set(choices)
+    submission_id = submission_id
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:exam_result', args=(course_id, submission_id)))
+
 
 # <HINT> Create a submit view to create an exam submission record for a course enrollment,
 # you may implement it based on following logic:
@@ -124,6 +134,24 @@ def extract_answers(request):
    return submitted_anwsers
 
 
+def exam(request):
+    context = {}
+    course = get_object_or_404(Course, pk = cours_id)
+    submission = Submission.objects.get(id = submission_id)
+    choices = submission.choices.all()
+    total_score = 0
+    question = course.question_set.all()
+    for question in questions:
+        correct_choices = question.choices.filter(is_correct = True)
+        selected_choiecs = choices.filter(question = question)
+
+        if set(correct_choices) == set(selected_choiecs):
+            total_score += question.grade
+    context['course'] = course
+    context['grade'] = total_score
+    context['choices'] = choices
+
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
 # <HINT> Create an exam result view to check if learner passed exam and show their question results and result for each question,
 # you may implement it based on the following logic:
         # Get course and submission based on their ids
